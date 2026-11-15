@@ -3173,6 +3173,8 @@ function kitchenSet(dx,dy,room){const o=(t,e)=>{const q=newObj(t,{room,cat:'Keit
   o('cabinet',{name:'Välitila liesiseinällä',x:0,y:3.2,rot:-90,W:2.2,D:0.015,H:1.2,elev:0.9,mat:'breccia',doors:0,handle:false}),
   o('panel',{name:'Otsalauta, uritettu',x:0.6,y:0,L:2.4,H:0.4,elev:2.0,D:0.62})]}
 /* piirretyn pohjan mukainen keittiö: sisämitat 2950 × 4800, kalustettu */
+const IS_PUBLIC=/^https?:$/.test(location.protocol)&&!/claude\.ai|claudeusercontent|anthropic|claude\.site|localhost|127\.0\.0\.1/.test(location.host);
+function emptyState(){return{schema:SCHEMA,name:'Uusi projekti',settings:{waste:10,roomH:2.5},bg:null,images:{},materials:MAT_DEFAULTS.map(m=>({...m})),objects:[],checks:[]}}
 function sampleState(){const R='Keittiö',o=(t,e)=>newObj(t,{room:R,...e}),op=(kind,e)=>({...OP_DEF[kind],id:uid('op'),...e}),M=(kind,w,n)=>({id:uid('md'),kind,w,n:n??MOD_KINDS[kind].d});
  const lr=o('run',{name:'Liesiniemeke',x:2.95,y:3.09,rot:180,L:1.3,D:0.62,ends:'niemi',rSF:0,rEF:0,rSB:0,rEB:0.3,modules:[M('laatikosto',0.6,3),M('kaappi',0.6,1),M('avoin',0.1)]});
  const rr=o('run',{name:'Allasniemeke',x:0.15,y:4.8,rot:270,L:1.65,D:0.64,ends:'loppu',rSF:0,rEF:0.3,modules:[M('laatikosto',0.4,3),M('allaskaappi',0.6,2),M('kaappi',0.65,1)]});
@@ -3229,7 +3231,7 @@ function validate(p,rep){const keep=[];for(const o of p.objects){if(!o||typeof o
  const rel=[...new Set(miss)].filter(k=>!NO.has(k)&&(k.startsWith('aukko.')?(o.openings||[]).some(q=>OP_FIELDS.some(f=>f.k===k.slice(6)&&(!f.show||f.show(q)))):vis.has(k)||['x','y','rot'].includes(k)));
  if(rel.length&&rep.from<SCHEMA)rep.filled.push({id:o.id,name:o.name,room:o.room,fields:rel.map(k=>fieldLabel(o,k))});keep.push(o)}
  p.objects=keep}
-function loadState(){try{const s=localStorage.getItem(LS);if(s){const p=JSON.parse(s);if(p&&p.objects)return migrate(p)}}catch(e){console.error(e)}return sampleState()}
+function loadState(){try{const s=localStorage.getItem(LS);if(s){const p=JSON.parse(s);if(p&&p.objects)return migrate(p)}}catch(e){console.error(e)}return IS_PUBLIC?emptyState():sampleState()}
 let saveT;function save(){if(typeof Cloud!=='undefined')Cloud.schedule();clearTimeout(saveT);saveT=setTimeout(()=>{try{if(typeof updDirty==='function')updDirty();const c={...S};delete c._rep;let js=JSON.stringify(c);if(js.length>4e6&&c.dxf){c.dxf={...c.dxf,segs:[],texts:[],tooBig:true};js=JSON.stringify(c);if(!save._warn){save._warn=1;toast('DXF-pohja on liian suuri selaimen välimuistiin: se säilyy, kun tallennat projektin (Tallenna).',6000)}}localStorage.setItem(LS,js)}catch(e){toast('Selaimen välimuisti on täynnä (isot kuvat tai DXF). Tallenna projekti Tallenna-painikkeella, niin mitään ei katoa.',6000)}},400)}
 const cleanE=e=>Object.fromEntries(Object.entries(e).filter(([k])=>!k.startsWith('_')));
 async function exportJSON(){const c={format:'remontti-cad',schema:SCHEMA,app:APP_VERSION,exported:new Date().toISOString(),...S};delete c._rep;c.images={};
@@ -4042,7 +4044,7 @@ function skyTex(){const c=mkCanvas(4,256),x=c.getContext('2d'),g=x.createLinearG
 function groundTex(){const c=mkCanvas(256),x=c.getContext('2d'),r=rng('ground');x.fillStyle=garden?'#7d9466':'#d3d1cc';x.fillRect(0,0,256,256);for(let i=0;i<5000;i++){const v=r();x.fillStyle=garden?(v<0.5?'rgba(60,85,45,.35)':'rgba(150,170,110,.3)'):(v<0.5?'rgba(120,118,112,.10)':'rgba(255,255,255,.12)');x.fillRect(r()*256,r()*256,1+r()*2,1+r()*3)}const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(40,40);t.encoding=THREE.sRGBEncoding;return t}
 let envDome=null,envBusy=0,envRidge=null,envSunM=null;const envImgCache={};
 const ENV_DEF={style:'meri',seaDir:110,seaW:100,shore:3500,elev:150,hillsDir:215,hillsH:15,townDir:125,rockDir:123,rockDist:5000,rockH:332,place:'Calpe, Espanja',veg:false,clouds:true};
-function envCfg(){const s=S.settings;if(!s.env||typeof s.env!=='object')s.env={};const e=s.env,d={...ENV_DEF,photos:[]};if(e.seaDir===110&&e.seaW===150&&e.shore===700&&e.elev===100&&e.hillsDir===290&&e.townDir===20&&e.rockDir===55)Object.assign(e,ENV_DEF);for(const k in d)if(e[k]===undefined)e[k]=Array.isArray(d[k])?[]:d[k];if(!Array.isArray(e.photos))e.photos=[];return e}
+function envCfg(){const s=S.settings;if(!s.env||typeof s.env!=='object')s.env={};const e=s.env,d={...ENV_DEF,...(IS_PUBLIC&&!e.style?{style:'simple',place:''}:{}),photos:[]};if(e.seaDir===110&&e.seaW===150&&e.shore===700&&e.elev===100&&e.hillsDir===290&&e.townDir===20&&e.rockDir===55)Object.assign(e,ENV_DEF);for(const k in d)if(e[k]===undefined)e[k]=Array.isArray(d[k])?[]:d[k];if(!Array.isArray(e.photos))e.photos=[];return e}
 function angD(a,b){return((a-b)%360+540)%360-180}
 function smooth(e0,e1,x){const t=clamp((x-e0)/(e1-e0),0,1);return t*t*(3-2*t)}
 function envNoise(seed){const r=rng(seed),h=[];for(let i=0;i<6;i++)h.push([1+Math.floor(r()*(3+i*5)),r()*2*PI,1/(1+i)]);return B=>{let s=0,n=0;for(const[f,p,a]of h){s+=Math.sin(B*D2R*f+p)*a;n+=a}return s/n}}
@@ -4159,7 +4161,7 @@ function envDialog(){const m=$('#modal'),E=envCfg();
   $('#en_cl').onchange=e=>{E.clouds=e.target.checked;upd()};$('#en_vg').onchange=e=>{E.veg=e.target.checked;upd()};
   m.querySelectorAll('[data-ep]').forEach(inp=>inp.onchange=()=>{const p=E.photos[+inp.dataset.i];p[inp.dataset.ep]=+inp.value;upd()});
   m.querySelectorAll('[data-ed]').forEach(b=>b.onclick=()=>{const p=E.photos.splice(+b.dataset.ed,1)[0];if(p&&p.key)delete S.images[p.key];upd();draw()});
-  $('#en_def').onclick=()=>{Object.assign(E,ENV_DEF);upd();draw()};
+  $('#en_def').onclick=()=>{Object.assign(E,IS_PUBLIC?{...ENV_DEF,style:'simple',place:''}:ENV_DEF);upd();draw()};
   let kind='dir';const fi=$('#en_file');$('#en_pano').onclick=()=>{kind='pano';fi.click()};$('#en_dirb').onclick=()=>{kind='dir';fi.click()};
   fi.onchange=()=>{const f=fi.files[0];if(!f)return;toast('Luetaan kuvaa…');readImage(f,kind==='pano'?6144:3072,async(url,asp)=>{const key=uid('env');S.images[key]=await Store.putDataURL(url);let p;if(kind==='pano'){const cov=Math.abs(asp-0.5)<0.03?360:Math.round(clamp(60/asp,30,360));p={key,dir:cov>=360?0:(E.seaDir||0),cov,hz:50}}else p={key,dir:E.seaDir||0,cov:65,hz:50};E.photos.push(p);upd();draw();toast(kind==='pano'?'Panoraama lisätty. Käännä Suunta-arvolla, kunnes näkymä osuu kohdalleen.':'Kuva lisätty. Aseta suunta, johon kuva on otettu.')})}};draw()}
 function themeChanged3D(){if(scene)applyEnv()}
@@ -4173,7 +4175,7 @@ const ptTexC={};function ptTex(k,n){const key=k+n;if(ptTexC[key])return ptTexC[k
 /* ===== Valaistus ja vuorokaudenaika ===== */
 const LOCS={calpe:['Calpe, Espanja',38.6447,0.0445,'Europe/Madrid'],alicante:['Alicante, Espanja',38.345,-0.481,'Europe/Madrid'],malaga:['Málaga, Espanja',36.721,-4.421,'Europe/Madrid'],madrid:['Madrid, Espanja',40.417,-3.704,'Europe/Madrid'],barcelona:['Barcelona, Espanja',41.387,2.17,'Europe/Madrid'],
  helsinki:['Helsinki',60.17,24.938,'Europe/Helsinki'],tampere:['Tampere',61.498,23.761,'Europe/Helsinki'],oulu:['Oulu',65.012,25.465,'Europe/Helsinki'],tukholma:['Tukholma',59.329,18.069,'Europe/Stockholm'],oma:['Oma sijainti',null,null,null]};
-function lightCfg(){if(!S.settings.light)S.settings.light={on:false,loc:'calpe',lat:38.6447,lon:0.0445,tz:'Europe/Madrid',date:'06-21',hour:15,north:0,lamps:false};const L=S.settings.light;if(L.loc==='calpe'&&L.lat===38.645&&L.lon===0.045){L.lat=38.6447;L.lon=0.0445}return L}
+function lightCfg(){if(!S.settings.light)S.settings.light=IS_PUBLIC?{on:false,loc:'helsinki',lat:60.17,lon:24.938,tz:'Europe/Helsinki',date:'06-21',hour:15,north:0,lamps:false}:{on:false,loc:'calpe',lat:38.6447,lon:0.0445,tz:'Europe/Madrid',date:'06-21',hour:15,north:0,lamps:false};const L=S.settings.light;if(L.loc==='calpe'&&L.lat===38.645&&L.lon===0.045){L.lat=38.6447;L.lon=0.0445}return L}
 function tzOffsetMin(tz,ms){try{const f=new Intl.DateTimeFormat('en-US',{timeZone:tz,hourCycle:'h23',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}),p={};for(const q of f.formatToParts(new Date(ms)))p[q.type]=q.value;return(Date.UTC(+p.year,+p.month-1,+p.day,(+p.hour)%24,+p.minute)-ms)/60000}catch(e){return null}}
 function localToUTC(L,mo,d,hour){const y=new Date().getFullYear(),g=Date.UTC(y,mo-1,d,0,0)+hour*3600e3;let off=L.tz?tzOffsetMin(L.tz,g):null;if(off==null)off=Math.round((L.lon||0)/15)*60;let t=g-off*60000;const o2=L.tz?tzOffsetMin(L.tz,t):null;if(o2!=null&&o2!==off)t=g-o2*60000;return t}
 function sunAt(L,mo,d,hour){const r=PI/180,n=(localToUTC(L,mo,d,hour)-Date.UTC(2000,0,1,12))/864e5,g=(357.529+0.98560028*n)*r,q=280.459+0.98564736*n,lam=(q+1.915*Math.sin(g)+0.02*Math.sin(2*g))*r,e=(23.439-0.00000036*n)*r;
@@ -5863,7 +5865,7 @@ function renderProj(){const el=$('#tab-proj'),bg=S.bg;let h=`<div class="f"><lab
   <div class="f"><label for="p_bx">Sijainti X</label><div class="in"><input id="p_bx" inputmode="decimal" value="${mmS(bg.x)}"><span>mm</span></div></div>
   <div class="f"><label for="p_by">Sijainti Y</label><div class="in"><input id="p_by" inputmode="decimal" value="${mmS(bg.y)}"><span>mm</span></div></div>
   <div class="f"><label for="p_bo">Näkyvyys</label><input type="range" id="p_bo" min="0.05" max="1" step="0.05" value="${bg.opacity}"></div>`;
- h+=`<div class="sec">Aloita alusta</div><div class="acts"><button class="btn" id="p_sample">Lataa esimerkkikeittiö</button>${hasBackup()?'<button class="btn" id="p_backup">Palauta varmuuskopio</button>':''}<button class="btn danger" id="p_clear">${clearArm?'Vahvista: tyhjennä kaikki':'Tyhjennä piirustus'}</button></div>
+ h+=`<div class="sec">Aloita alusta</div><div class="acts">${IS_PUBLIC?'':'<button class="btn" id="p_sample">Lataa esimerkkikeittiö</button>'}${hasBackup()?'<button class="btn" id="p_backup">Palauta varmuuskopio</button>':''}<button class="btn danger" id="p_clear">${clearArm?'Vahvista: tyhjennä kaikki':'Tyhjennä piirustus'}</button></div>
  <p class="small">Pikanäppäimet: Ctrl+Z kumoa, Ctrl+Y tee uudelleen, Ctrl+D monista, R kierrä, Delete poista, Esc lopeta työkalu. Nuolinäppäimet siirtävät valittua kohdetta 10 mm (Vaihto: 100 mm). Valitun kohteen mittalukua klikkaamalla voit kirjoittaa uuden mitan; seinien nurkat seuraavat mukana. Mittakentissä nuolinäppäimet muuttavat arvoa 10 mm (Vaihto: 100 mm). Alt vedettäessä ohittaa kohdistuksen.</p>
  <p class="small">Sovelluksen versio ${APP_VERSION} · mallin versio ${SCHEMA}</p>`;
  el.innerHTML=h;
@@ -5890,7 +5892,7 @@ function renderProj(){const el=$('#tab-proj'),bg=S.bg;let h=`<div class="f"><lab
  $('#p_show').onclick=async()=>{const t=$('#p_txt');t.hidden=false;$('#p_txtacts').hidden=false;t.value=await exportJSON();t.select()};
  $('#p_copy').onclick=()=>{const t=$('#p_txt');try{navigator.clipboard.writeText(t.value).then(()=>toast('Kopioitu.'),()=>{t.select();toast('Valittu: kopioi Ctrl+C / Cmd+C')})}catch(e){t.select()}};
  $('#p_imp').onclick=()=>importText($('#p_txt').value);
- $('#p_sample').onclick=()=>{pushUndo();const imgs=S.images;S=sampleState();Object.assign(S.images,imgs);selId=null;selOp=null;refreshMats();dirty({props:true,mats:true});setTimeout(()=>{fit();setCam('sketch')},30);toast('Esimerkkikeittiö ladattu. Kumoa palauttaa edellisen.')};
+ if($('#p_sample'))$('#p_sample').onclick=()=>{pushUndo();const imgs=S.images;S=sampleState();Object.assign(S.images,imgs);selId=null;selOp=null;refreshMats();dirty({props:true,mats:true});setTimeout(()=>{fit();setCam('sketch')},30);toast('Esimerkkikeittiö ladattu. Kumoa palauttaa edellisen.')};
  if($('#p_backup'))$('#p_backup').onclick=()=>{try{importText(localStorage.getItem(LS+'.backup'))}catch(e){toast('Varmuuskopiota ei voitu lukea.')}};
  $('#p_clear').onclick=()=>{if(!clearArm){clearArm=true;renderProj();setTimeout(()=>{clearArm=false;if(!$('#tab-proj').hidden)renderProj()},4000);return}clearArm=false;pushUndo();S.objects=[];S.checks=[];S.dims=[];S.floors=[];S.floorId=null;ensureFloors();S.bg=null;S.dxf=null;dxfCache=null;calib=null;selId=null;selOp=null;try{renderFloorBar()}catch(e){}dirty({props:true});renderProj();toast('Piirustus tyhjennetty: kaikki kerrokset, mitat ja pohjakuva. Kumoa palauttaa sen.')}}
 /* ===== Projektit: tallenna, avaa, uusi ===== */
@@ -6216,6 +6218,13 @@ async function cloudDialog(){const m=$('#modal');let em='';try{await Cloud.init(
    el.querySelectorAll('[data-cld]').forEach(b=>b.onclick=async()=>{if(b.dataset.ok!=='1'){b.dataset.ok='1';b.textContent='Varmasti?';return}try{await Cloud.del(b.dataset.cld);draw()}catch(e){msg('Poisto ei onnistunut: '+cloudErr(e))}})}catch(e){const el=$('#cl_list');if(el)el.textContent='Projektien haku ei onnistunut: '+cloudErr(e)}};
  draw()}
 function confirmDiscard(){return true}
+function welcomeDialog(){const m=$('#modal');m.innerHTML=`<div class="dlg" role="dialog" aria-modal="true" aria-labelledby="wlT" style="max-width:480px"><h2 id="wlT">Tervetuloa Mallu's Design Tooliin</h2>
+ <p>Suunnittele huoneet, keittiöt ja remontit 2D-pohjana ja katso ne 3D:nä.</p>
+ <p><b>Voit kokeilla vapaasti</b> – kirjautumista ei tarvita.</p>
+ <p><b>Jos haluat tallentaa projektisi</b>, kirjaudu sähköpostilla. Silloin projektit säilyvät pilvessä ja aukeavat miltä tahansa laitteelta.</p>
+ <div class="acts" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><button class="btn" id="wl_try">Kokeile ilman kirjautumista</button><button class="btn primary on" id="wl_in">☁ Kirjaudu ja tallenna</button></div></div>`;m.hidden=false;
+ const done=()=>{try{localStorage.setItem('mallu.welcomed','1')}catch(e){}};$('#wl_try').onclick=()=>{done();m.hidden=true;m.innerHTML=''};$('#wl_in').onclick=()=>{done();cloudDialog()}}
+if(IS_PUBLIC){setTimeout(async()=>{let seen=false;try{seen=!!localStorage.getItem('mallu.welcomed')||!!localStorage.getItem('mallu-sb-auth')}catch(e){}if(!seen&&$('#modal').hidden)welcomeDialog()},1200)}
 $('#cloudBtn').onclick=cloudDialog;if(/claude\.ai|claudeusercontent|anthropic|claude\.site/.test(location.host)||location.protocol==='blob:'){$('#cloudBtn').hidden=true}
 try{if(localStorage.getItem('mallu-sb-auth')||/access_token|token_hash|type=magiclink/.test(location.hash+location.search))Cloud.init().then(()=>{if(/access_token/.test(location.hash))history.replaceState(null,'',location.pathname)}).catch(()=>{})}catch(e){}
 
