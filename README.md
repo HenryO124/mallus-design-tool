@@ -4,7 +4,7 @@ Selaimessa toimiva suunnitteluohjelma remontteihin ja sisustukseen: 2D-pohjapiir
 
 ## Käyttö
 
-Avaa sivu: https://henryo124.github.io/mallus-design-tool/
+Avaa sivu: https://mallusdesign.com
 
 `index.html` toimii myös sellaisenaan ilman nettiyhteyttä: lataa tiedosto ja avaa se selaimessa. Projektit tallentuvat vain omaan selaimeesi (IndexedDB / localStorage) – niitä ei lähetetä mihinkään. Varmuuskopion saa Projekti-välilehdeltä JSON-tiedostona.
 
